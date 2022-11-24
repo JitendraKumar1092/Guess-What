@@ -9,8 +9,8 @@ const { Socket } = require("socket.io");
 const getWord=require("./api/getWord");
 
 app.use(express.json());
-// const DB="mongodb+srv://salazar:praveen2003@cluster0.4viokue.mongodb.net/?retryWrites=true&w=majority";
-const  DB="mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.6.0";
+ const DB="mongodb+srv://salazar:praveen2003@cluster0.4viokue.mongodb.net/?retryWrites=true&w=majority";
+//const  ="mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.6.0";
 
 mongoose.connect(DB).then(()=>{
     console.log("mongodb connection successful");
@@ -119,10 +119,35 @@ io.on('connection',(socket)=>{
             console.log(error.toString());
         }
     });
-    socket.on('change-turn',async (roomName)=>{
+    socket.on('change-turn-time',async (roomName)=>{
         try {
             console.log('change turn server side');
-            let room =await Room.findOne({name:roomName});  
+            let room =await Room.findOne({name:roomName}); 
+            if(room['players'][0]['socketID']==socket.id){
+                let idx=room.turnIndex;
+                if(idx+1==room.players.length){
+                    room.currentRound+=1;
+                }
+                if(room.currentRound<=room.maxRounds){
+                    const word=getWord();
+                    room.word=word;
+                    room.turnIndex=(idx+1)%room.players.length;
+                    room.turn=room.players[room.turnIndex];
+                    room=await room.save();
+                    console.log('sending change turn to client side');
+                    io.to(roomName).emit('change-turn',room);
+                }else{
+                    io.to(roomName).emit('leaderBoard', room.players);
+                }
+            }
+        } catch (error) {
+            console.log(error.toString());
+        }
+    });
+    socket.on('change-turn-guess',async (roomName)=>{
+        try {
+            console.log('change turn server side');
+            let room =await Room.findOne({name:roomName}); 
             let idx=room.turnIndex;
             if(idx+1==room.players.length){
                 room.currentRound+=1;

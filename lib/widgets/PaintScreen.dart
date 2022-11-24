@@ -73,11 +73,12 @@ class _PaintScreenState extends State<PaintScreen> {
     const oneSecond = Duration(seconds: 1);
     _timer = new Timer.periodic(oneSecond, (Timer time) {
       if (_start == 0) {
-        print('requesting change turn due to time limit');
+        print(
+            'requesting change turn due to time limit by ${widget.data["nickName"]}');
         setState(() {
           _timer.cancel();
         });
-        _socket.emit('change-turn', dataOfRoom['name']);
+        _socket.emit('change-turn-time', dataOfRoom['name']);
       } else {
         setState(() {
           _start--;
@@ -161,9 +162,12 @@ class _PaintScreenState extends State<PaintScreen> {
           messages.add(obj);
           guessedUserCtr = obj['guessedUserCtr'];
         });
-        if (guessedUserCtr == dataOfRoom['players'].length - 1) {
-          print('requesting change turn due to max guess');
-          _socket.emit('change-turn', dataOfRoom['name']);
+        if (obj['userName'] == widget.data['nickName']) {
+          if (guessedUserCtr == dataOfRoom['players'].length - 1) {
+            print(
+                'requesting change turn due to max guess by ${widget.data["nickName"]}');
+            _socket.emit('change-turn-guess', dataOfRoom['name']);
+          }
         }
         _scrollController.animateTo(
             _scrollController.position.maxScrollExtent + 40,
@@ -172,7 +176,6 @@ class _PaintScreenState extends State<PaintScreen> {
       });
       _socket.on('change-turn', (data) {
         String oldWord = dataOfRoom['word'];
-        print(data);
         // print("${widget.data['nickName']}=>${data['turn']['nickName']}");
         showDialog(
             context: context,
@@ -255,10 +258,6 @@ class _PaintScreenState extends State<PaintScreen> {
       key: scaffold_key,
       drawer: CustomDrawer(userData: scoreBoard),
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text("Paint Screen"),
-        centerTitle: true,
-      ),
       body: dataOfRoom != null
           ? dataOfRoom['isJoin'] != true
               ? !showLeaderBoard
